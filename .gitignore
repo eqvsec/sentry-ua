@@ -1,0 +1,20 @@
+# Runtime database - this is per-deployment telemetry data, not source.
+user_agents.db
+user_agents.db-*
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Editor/OS cruft
+.DS_Store
+.vscode/
+.idea/

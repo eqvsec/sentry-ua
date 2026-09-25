@@ -1,0 +1,20 @@
+# Every dependency has an upper bound at its next major version (next minor
+# for 0.x packages), so a breaking upstream release can't silently break a
+# fresh install. Dependabot (.github/dependabot.yml) proposes raising these,
+# and CI tests each proposal before it's merged.
+#
+# st.iframe (the event inspector's isolated data: URL frame) arrived in
+# Streamlit 1.56, replacing the deprecated st.components.v1.html; that also
+# comfortably covers st.dialog's dismissible parameter (added in 2025).
+streamlit>=1.56,<2
+streamlit-autorefresh>=1.0.1,<2
+pandas>=2.0,<4
+altair>=5.0,<7
+PyYAML>=6.0,<7
+requests>=2.31,<3
+streamlit-aggrid>=1.2.1.post2,<2.0
+# Browser-cookie persistence backstop for theme/refresh/firewall/search -
+# query params alone don't survive closing the tab and opening a fresh one.
+# Reviewed 2026-09-24: MIT-licensed; its frontend only reads/writes
+# document.cookie (no network calls). 0.x, so capped at the next minor.
+streamlit-cookies-controller>=0.0.4,<0.1

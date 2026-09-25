@@ -1,0 +1,4 @@
+# Test/CI-only dependencies, on top of requirements.txt:
+#   pip install -r requirements.txt -r requirements-dev.txt
+pytest>=8.0,<10
+pyflakes>=3.2,<5

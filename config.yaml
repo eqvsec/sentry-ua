@@ -1,0 +1,140 @@
+network:
+  listen_ip: "0.0.0.0"
+  listen_port: 1514
+  # Source-IP allow-list for the UDP syslog listener. Accepts individual
+  # IPs ("10.0.0.5") or CIDR ranges ("10.0.0.0/24") - list as many entries
+  # as you have firewalls/log-forwarding sources. A packet whose source IP
+  # doesn't match any entry is dropped before any parsing happens and
+  # logged at startup-config level detail.
+  #
+  # Default is 0.0.0.0/0 - every source IP trusted - matching this app's
+  # behavior before this setting existed. PAN-OS syslog has no built-in
+  # authentication, so this ACL is the only thing standing between "any
+  # host that can reach this UDP port" and "can inject fabricated
+  # telemetry, spoof alerts, or flood the collector" - narrowing this to
+  # your actual firewalls' IPs (or their subnet) is the real fix, not the
+  # default. The default stays permissive here because this app can't know
+  # your firewalls' IPs for you; set this before exposing the listener
+  # beyond a fully trusted network.
+  allowed_sources: ["0.0.0.0/0"]
+
+database:
+  # Used by both the collector and the dashboard. The SENTRY_UA_DB_PATH
+  # environment variable, when set, overrides this (the Docker image sets
+  # it to /data/user_agents.db, on a volume).
+  db_path: "user_agents.db"
+
+# Google Chat Webhook URL (Leave empty string "" to disable alerts)
+alerts:
+  gchat_webhook_url: ""
+
+# Zone mappings for traffic direction (case-insensitive).
+#
+# Only the zones that face OUTSIDE your trust boundary need listing here -
+# anything not named below (LAN, Users, Servers, VLAN10, a DMZ, a partner
+# zone - whatever a given site happens to call its non-edge segments) is
+# implicitly treated as "inside" for direction purposes. This is
+# deliberate: across a fleet, internal/DMZ zone naming tends to be the
+# inconsistent, hard-to-keep-in-sync part (every site names its own
+# segments), while external/edge zone naming tends to be a small, stable,
+# centrally-controlled set (usually just 1-3 names fleet-wide) - so that's
+# the one list worth maintaining by hand. There's no separate internal or
+# DMZ list: traffic between an external_zones entry and ANY other zone is
+# classified as ingress/egress, and traffic between two non-external zones
+# (internal-to-internal, internal-to-DMZ, etc.) is left unclassified -
+# exactly as it always has been for zones with no direction between them.
+#
+# This also means a DMZ (or partner/extranet) zone is handled correctly
+# with no extra config: DMZ -> an external_zones entry counts as egress
+# (a DMZ host talking out to the internet - worth catching), an
+# external_zones entry -> DMZ counts as ingress (inbound to a DMZ-hosted
+# service - usually the most security-relevant ingress traffic there is),
+# and DMZ <-> internal traffic stays unclassified, the same as before this
+# zone existed in the config at all.
+zones:
+  external_zones: ["Outside-Untrust", "WAN", "Internet"]
+
+# Palo Alto CSV field indexes (0-based)
+# URL Filtering Log Fields: Action=30, User Agent=46
+# Reference: https://docs.paloaltonetworks.com/ngfw/administration/monitoring/use-syslog-for-monitoring/syslog-field-descriptions/url-filtering-log-fields
+log_format:
+  type_index: 3
+  subtype_index: 4
+  src_ip_index: 7
+  dst_ip_index: 8
+  src_zone_index: 16
+  dst_zone_index: 17
+  action_index: 30
+  user_agent_index: 46
+  device_serial_index: 2
+  device_name_index: 59
+
+# Multiple firewalls are NOT defined here. Every PAN-OS syslog already
+# carries its sending device's Serial Number (field 2) and Device Name
+# (field 59), so the tracker discovers firewalls automatically as they send
+# traffic - the same way Panorama does - and keys telemetry per device
+# behind the scenes. The dashboard's firewall dropdown is populated straight
+# from whatever device_serial/device_name values are already in the
+# database; there's nothing to list here manually, and nothing breaks if a
+# firewall's hostname changes later (the dashboard just shows its latest
+# reported name).
+#
+# Zone-to-direction mapping (above, under "zones") stays global/fleet-wide -
+# it's applied the same way to every firewall's logs. If different
+# firewalls in your environment use different zone names for the same
+# role, this is the one thing that would need to become per-firewall in a
+# future revision.
+
+# Dashboard UI defaults. The dashboard dropdown can override this and persist the
+# selected value in the browser URL.
+dashboard:
+  refresh_seconds: 120
+  # Source-IP allow-list for the dashboard itself. Same format as
+  # network.allowed_sources above: individual IPs ("10.0.0.5") or CIDR
+  # ranges ("10.0.0.0/24"). A connecting browser whose IP doesn't match any
+  # entry sees a plain "Access Denied" page - no telemetry, no UI, nothing
+  # else rendered. Default is 0.0.0.0/0 - every source trusted - matching
+  # this app's behavior before this setting existed.
+  #
+  # Read this before relying on it: Streamlit itself documents the value
+  # this is built on (st.context.ip_address) as "should not be used for
+  # security measures because it can easily be spoofed." In THIS app's
+  # default setup - Streamlit reached directly, no reverse proxy in front -
+  # that's the real TCP peer address and this is a genuine, effective
+  # gate. But if you ever put a reverse proxy in front of the dashboard
+  # (e.g. for HTTPS termination, which Streamlit's own docs recommend over
+  # the https.enabled option above), every connection will appear to come
+  # from the proxy's own IP and this allow-list will silently stop doing
+  # anything useful unless the proxy is configured to forward and Streamlit
+  # is configured to trust the real client IP. Treat this as a convenience
+  # gate for a direct, unproxied deployment - a host firewall/ACL in front
+  # of the dashboard's port is the real, unspoofable version of this
+  # control, the same relationship network.allowed_sources above has with
+  # a host firewall.
+  allowed_sources: ["0.0.0.0/0"]
+
+# HTTPS for the dashboard. Leave enabled: false (default) to run plain
+# HTTP - fine when the dashboard is only reached directly on a fully
+# trusted network. Set enabled: true and both file paths below to serve it
+# over TLS instead.
+#
+# Start the dashboard with `python run_dashboard.py` (not `streamlit run
+# dashboard.py` directly) for this to take effect - Streamlit's own HTTPS
+# support (server.sslCertFile / server.sslKeyFile) has to be set before its
+# server starts listening, which is before dashboard.py itself ever runs,
+# so this can't be wired up from inside the app script. run_dashboard.py
+# reads this section and passes the cert/key to `streamlit run` as command
+# -line flags instead.
+#
+# Per Streamlit's own docs (https://docs.streamlit.io/develop/concepts/
+# configuration/https-support): both cert_file and key_file are required
+# together, this feature "has not gone through extensive security audits
+# or performance tests," and for anything beyond casual/internal use they
+# recommend doing SSL termination at a reverse proxy or load balancer
+# instead of this. Use this for convenience on a small internal deployment;
+# consider a reverse proxy (nginx, Caddy, etc.) in front of plain HTTP for
+# anything more exposed.
+https:
+  enabled: false
+  cert_file: ""
+  key_file: ""

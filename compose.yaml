@@ -1,0 +1,38 @@
+# docker compose up -d --build
+#
+# Two containers from one image, sharing the SQLite database on a named
+# volume: the collector (sole writer) and the dashboard (read-only).
+# Read the "Docker" section of README.md before relying on either
+# allow-list in config.yaml under Docker - source-IP visibility and host
+# firewall behavior both differ from a bare-metal install.
+services:
+  collector:
+    build: .
+    image: sentry-ua:local
+    command: ["python", "palo_ua_tracker.py"]
+    ports:
+      - "1514:1514/udp"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - sentry-ua-data:/data
+    restart: unless-stopped
+
+  dashboard:
+    image: sentry-ua:local
+    command: ["python", "run_dashboard.py", "--no-collector"]
+    depends_on:
+      - collector
+    ports:
+      # Binds every host interface, like a bare-metal Streamlit. Behind a
+      # reverse proxy on the same host, use "127.0.0.1:8501:8501" instead.
+      - "8501:8501"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - sentry-ua-data:/data
+      # For config.yaml's https section, mount the cert/key and point
+      # cert_file/key_file at these container paths:
+      # - ./certs:/certs:ro
+    restart: unless-stopped
+
+volumes:
+  sentry-ua-data:

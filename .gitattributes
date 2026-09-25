@@ -1,0 +1,4 @@
+# Keep LF in the repo regardless of contributors' core.autocrlf settings.
+* text=auto eol=lf
+*.png binary
+*.db binary
