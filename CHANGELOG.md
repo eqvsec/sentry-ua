@@ -338,3 +338,17 @@ The repository now lives at `eqvsec/sentry-ua` (private until the public launch)
 Dependabot's first pip PR showed its default strategy doesn't fit a range-based `requirements.txt`: it raised every *minimum* to the latest release (`pandas>=3.0.6`, `streamlit>=1.64.0`, ...). pandas 3 requires Python 3.11+, so that would have silently dropped the Python 3.10 support CI tests for. The pip config now uses `versioning-strategy: increase-if-necessary`, which only proposes a change when a new release falls outside the allowed range (a new major version to vet), and that PR was closed. Its other first PRs were CI-tested and merged: `actions/checkout` and `actions/setup-python` moved to v7, clearing the Node 20 deprecation warnings every CI job had been printing, and the Docker base image moved from `python:3.12-slim` to `python:3.14-slim` (3.14 is also a CI test target, and the Docker job passed on it).
 
 CodeQL is configured but skips itself while the repo is private (uploading results needs a paid plan on private repos). It starts running on its own once the repo goes public, together with branch protection and GitHub private vulnerability reporting, which are set up at that point.
+
+### 2026-09-25 — Public launch
+The repository is public. Before flipping visibility, every commit in the history (not just the latest tree) was scanned for personal details, local file paths, credentials, and anything from the real firewall that development testing had touched. It came up clean: 39 files, every commit authored by `eqvsec`'s noreply address or Dependabot. The only branch on the remote was `main`.
+
+Turned on with the switch, since each is free on a public repo:
+- **Private vulnerability reporting** - the Security tab's "Report a vulnerability", now the preferred channel in `SECURITY.md` (X DMs still work).
+- **Dependabot security alerts and automatic security-fix PRs**, alongside the weekly version-update PRs already configured.
+- **Secret scanning with push protection** - a push containing a recognizable credential is blocked before it reaches GitHub.
+- **CodeQL** - the workflow was already in place and skipping itself while private; it now runs on every push and PR, and weekly.
+- **Branch protection on `main`** - all four CI checks (`test (3.10)`, `test (3.12)`, `test (3.14)`, `docker`) must pass on a branch that's up to date with `main`, conversations must be resolved, history stays linear, and force-pushes and branch deletion are blocked. No required review, since a solo maintainer can't approve their own PRs, and admin enforcement is left off so an urgent fix isn't blocked by a flaky runner - which also means the protection guards against accidents, not against the owner.
+- **Squash-merge only, with merged branches deleted**, to match the linear-history rule.
+- CI and CodeQL badges at the top of the README, and repository topics for discoverability.
+
+This entry was itself merged through a pull request, as the first check that the protection rules work as intended.
