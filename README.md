@@ -1,5 +1,7 @@
 # Sentry UA
 
+[![CI](https://github.com/eqvsec/sentry-ua/actions/workflows/ci.yml/badge.svg)](https://github.com/eqvsec/sentry-ua/actions/workflows/ci.yml) [![CodeQL](https://github.com/eqvsec/sentry-ua/actions/workflows/codeql.yml/badge.svg)](https://github.com/eqvsec/sentry-ua/actions/workflows/codeql.yml)
+
 **v1.0.0** · [MIT License](LICENSE)
 
 A User-Agent telemetry dashboard and UDP syslog collector for Palo Alto Networks PAN-OS firewalls.
