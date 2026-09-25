@@ -6,6 +6,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Only touch a requirement when a new release falls OUTSIDE its range
+    # (i.e. a new major version to vet). The default strategy raises every
+    # minimum to the latest release, which would silently drop support for
+    # older Pythons (e.g. pandas>=3 needs Python 3.11+, but CI tests 3.10).
+    versioning-strategy: increase-if-necessary
     groups:
       python-dependencies:
         patterns: ["*"]
