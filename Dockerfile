@@ -1,7 +1,7 @@
 # Sentry UA - one image, two roles (see compose.yaml):
 #   collector:  python palo_ua_tracker.py
 #   dashboard:  python run_dashboard.py --no-collector   (default CMD)
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
